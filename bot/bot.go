@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	bot, err := commands.NewBot("!", TOKEN)
+	bot, err := commands.NewBot(":=", TOKEN)
 
 	if err != nil {
 		fmt.Println("encountered error ")

@@ -4,7 +4,7 @@ import "github.com/bwmarrin/discordgo"
 
 type Context struct {
 	Bot     *Bot
-	Command Command
+	Command CommandBase
 
 	Session *discordgo.Session
 	Author  *discordgo.User
@@ -13,7 +13,7 @@ type Context struct {
 	Guild   *discordgo.Guild
 }
 
-func NewContext(bot *Bot, command Command, author *discordgo.User, member *discordgo.Member,
+func NewContext(bot *Bot, command CommandBase, author *discordgo.User, member *discordgo.Member,
 	channel *discordgo.Channel, guild *discordgo.Guild) Context {
 	return Context{
 		Bot:     bot,

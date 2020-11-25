@@ -19,5 +19,7 @@ func hasPrefix(str string, prefix string, caseInsensitive bool) (bool, string) {
 
 func ExecuteSafely() {
 	err := recover()
-	fmt.Println("recovered in ExecuteSafely, found error:", err)
+	if err != nil {
+		fmt.Println("recovered in ExecuteSafely, found error:", err)
+	}
 }

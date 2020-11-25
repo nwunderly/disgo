@@ -15,7 +15,8 @@ type Bot struct {
 
 	Session *discordgo.Session
 
-	Commands map[string]Command
+	Commands map[string]CommandBase
+	HelpCommand HelpCommand
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -27,10 +28,12 @@ func NewBot(prefix, token string) (*Bot, error) {
 	bot := Bot{
 		Prefix:   prefix,
 		Session:  session,
-		Commands: make(map[string]Command),
+		Commands: make(map[string]CommandBase),
 	}
 
 	session.AddHandler(bot.MessageCreateHandler())
+	bot.HelpCommand = NewDefaultHelpCommand()
+	bot.Commands["help"] = helpCommandRunner{bot}
 
 	return &bot, nil
 }
@@ -45,10 +48,10 @@ func (bot Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.Messag
 	}
 }
 
-func (bot Bot) Command(name string, callback commandInvoke) Command {
+func (bot Bot) Command(name string, callback commandInvokeCallback) Command {
 	command := Command{
 		Name:   name,
-		Invoke: callback,
+		InvokeCallback: callback,
 	}
 
 	bot.Commands[name] = command
@@ -56,7 +59,7 @@ func (bot Bot) Command(name string, callback commandInvoke) Command {
 	return command
 }
 
-func (bot Bot) GetCommand(name string) (Command, bool) {
+func (bot Bot) GetCommand(name string) (CommandBase, bool) {
 	command, hasKey := bot.Commands[name]
 	if hasKey {
 		return command, true
