@@ -19,5 +19,8 @@ func main() {
 			return err
 		})
 
+	bot.CaseInsensitive = true
+	//bot.RemoveCommand("help")
+
 	bot.Run()
 }

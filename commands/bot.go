@@ -12,11 +12,9 @@ import (
 type Bot struct {
 	Prefix          string
 	CaseInsensitive bool
-
-	Session *discordgo.Session
-
-	Commands map[string]CommandBase
-	HelpCommand HelpCommand
+	Session         *discordgo.Session
+	Commands        map[string]CommandBase
+	//HelpCommand HelpCommand
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -32,8 +30,7 @@ func NewBot(prefix, token string) (*Bot, error) {
 	}
 
 	session.AddHandler(bot.MessageCreateHandler())
-	bot.HelpCommand = NewDefaultHelpCommand()
-	bot.Commands["help"] = helpCommandRunner{bot}
+	bot.SetHelpCommand(NewDefaultHelpCommand())
 
 	return &bot, nil
 }
@@ -50,7 +47,7 @@ func (bot Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.Messag
 
 func (bot Bot) Command(name string, callback commandInvokeCallback) Command {
 	command := Command{
-		Name:   name,
+		Name:           name,
 		InvokeCallback: callback,
 	}
 
@@ -60,11 +57,23 @@ func (bot Bot) Command(name string, callback commandInvokeCallback) Command {
 }
 
 func (bot Bot) GetCommand(name string) (CommandBase, bool) {
+
 	command, hasKey := bot.Commands[name]
+
 	if hasKey {
 		return command, true
 	}
 	return Command{}, false
+}
+
+func (bot Bot) RemoveCommand(name string) {
+	delete(bot.Commands, name)
+}
+
+func (bot Bot) SetHelpCommand(help HelpCommand) {
+	//bot.HelpCommand = help
+	info := help.Info()
+	bot.Commands[info.Name] = helpCommandRunner{bot, help}
 }
 
 func (bot *Bot) GetContext(event *discordgo.MessageCreate) (Context, bool) {
