@@ -14,6 +14,7 @@ type Bot struct {
 	CaseInsensitive bool
 	Session         *discordgo.Session
 	Commands        map[string]CommandBase
+	Cogs            map[string]CogBase
 	//HelpCommand HelpCommand
 }
 
@@ -27,6 +28,7 @@ func NewBot(prefix, token string) (*Bot, error) {
 		Prefix:   prefix,
 		Session:  session,
 		Commands: make(map[string]CommandBase),
+		Cogs:     make(map[string]CogBase),
 	}
 
 	session.AddHandler(bot.MessageCreateHandler())
@@ -39,13 +41,18 @@ func (bot Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.Messag
 	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
 		ctx, valid := bot.GetContext(event)
 		if valid {
-			defer ExecuteSafely()
+			defer RecoverAndLog()
 			_ = ctx.Invoke()
 		}
 	}
 }
 
-func (bot Bot) Command(name string, callback commandInvokeCallback) Command {
+func (bot Bot) Command(name string, callback CommandCallback) (Command, error) {
+	_, hasKey := bot.Commands[name]
+	if hasKey {
+		return Command{}, fmt.Errorf("command %s already exists", name)
+	}
+
 	command := Command{
 		Name:           name,
 		InvokeCallback: callback,
@@ -53,7 +60,16 @@ func (bot Bot) Command(name string, callback commandInvokeCallback) Command {
 
 	bot.Commands[name] = command
 
-	return command
+	return command, nil
+}
+
+func (bot Bot) AddCommand(command Command) error {
+	_, commandExists := bot.GetCommand(command.Name)
+	if commandExists {
+		return fmt.Errorf("command %s already exists", command.Name)
+	}
+	bot.Commands[command.Name] = command
+	return nil
 }
 
 func (bot Bot) GetCommand(name string) (CommandBase, bool) {
@@ -112,6 +128,33 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (Context, bool) {
 
 	return NewContext(bot, command, message.Author, message.Member, channel, guild), true
 
+}
+
+func (bot Bot) LoadCog(cog CogBase) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			fmt.Printf("Error loading cog %s: %s\n", cog.GetName(), err)
+		}
+	}()
+
+	println("Setting up cog", cog.GetName())
+	println(bot.Cogs)
+	cog.Setup(bot)
+
+	println("Cog set up")
+	bot.Cogs[cog.GetName()] = cog
+
+	println("adding commands")
+	for name, cmd := range cog.Commands() {
+		println("adding command", name)
+		err := bot.AddCommand(cmd)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	go ExecuteSafely(cog.CogLoad)
 }
 
 func (bot *Bot) Run() {

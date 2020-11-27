@@ -37,7 +37,7 @@ func NewDefaultHelpCommand() DefaultHelpCommand {
 type DefaultHelpCommand struct {
 	Name string
 	Desc string
-	//InvokeCallback commandInvokeCallback
+	//InvokeCallback CommandCallback
 }
 
 func (help DefaultHelpCommand) Info() CommandInfo {

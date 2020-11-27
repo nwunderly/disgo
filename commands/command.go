@@ -1,6 +1,6 @@
 package commands
 
-type commandInvokeCallback func(Context) error
+type CommandCallback func(Context) error
 type CommandInfo struct {
 	Name string
 	Desc string
@@ -14,7 +14,7 @@ type CommandBase interface {
 type Command struct {
 	Name           string
 	Desc           string
-	InvokeCallback commandInvokeCallback
+	InvokeCallback CommandCallback
 }
 
 func (cmd Command) Invoke(ctx Context) error {
