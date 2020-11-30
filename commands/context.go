@@ -4,7 +4,7 @@ import "github.com/bwmarrin/discordgo"
 
 type Context struct {
 	Bot     *Bot
-	Command CommandBase
+	Command *Command
 
 	Session *discordgo.Session
 	Author  *discordgo.User
@@ -13,9 +13,13 @@ type Context struct {
 	Guild   *discordgo.Guild
 }
 
-func NewContext(bot *Bot, command CommandBase, author *discordgo.User, member *discordgo.Member,
-	channel *discordgo.Channel, guild *discordgo.Guild) Context {
-	return Context{
+var NilContext = &Context{
+	Command: NilCommand,
+}
+
+func NewContext(bot *Bot, command *Command, author *discordgo.User, member *discordgo.Member,
+	channel *discordgo.Channel, guild *discordgo.Guild) *Context {
+	return &Context{
 		Bot:     bot,
 		Command: command,
 		Session: bot.Session,
@@ -26,10 +30,10 @@ func NewContext(bot *Bot, command CommandBase, author *discordgo.User, member *d
 	}
 }
 
-func (ctx Context) Invoke() error {
+func (ctx *Context) Invoke() error {
 	return ctx.Command.Invoke(ctx)
 }
 
-func (ctx Context) Send(content string) (*discordgo.Message, error) {
+func (ctx *Context) Send(content string) (*discordgo.Message, error) {
 	return ctx.Session.ChannelMessageSend(ctx.Channel.ID, content)
 }

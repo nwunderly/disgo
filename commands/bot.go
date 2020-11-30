@@ -13,9 +13,9 @@ type Bot struct {
 	Prefix          string
 	CaseInsensitive bool
 	Session         *discordgo.Session
-	Commands        map[string]CommandBase
-	Cogs            map[string]CogBase
-	//HelpCommand HelpCommand
+	Commands        []*Command
+	Cogs            []*Cog
+	HelpCommand *HelpCommand
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -23,21 +23,23 @@ func NewBot(prefix, token string) (*Bot, error) {
 	if err != nil {
 		return nil, err
 	}
+	commands := make([]*Command, 0, 1)
+	cogs := make([]*Cog, 0)
 
 	bot := Bot{
 		Prefix:   prefix,
 		Session:  session,
-		Commands: make(map[string]CommandBase),
-		Cogs:     make(map[string]CogBase),
+		Commands: commands,
+		Cogs:     cogs,
 	}
 
 	session.AddHandler(bot.MessageCreateHandler())
-	bot.SetHelpCommand(NewDefaultHelpCommand())
+	err = bot.SetHelpCommand(NewDefaultHelpCommand())
 
-	return &bot, nil
+	return &bot, err
 }
 
-func (bot Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
+func (bot *Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
 	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
 		ctx, valid := bot.GetContext(event)
 		if valid {
@@ -47,68 +49,65 @@ func (bot Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.Messag
 	}
 }
 
-func (bot Bot) Command(name string, callback CommandCallback) (Command, error) {
-	_, hasKey := bot.Commands[name]
-	if hasKey {
-		return Command{}, fmt.Errorf("command %s already exists", name)
+func (bot *Bot) Command(name string, callback CommandHandler) (*Command, error) {
+
+	command := &Command{
+		Name:    name,
+		Handler: callback,
 	}
+	err := bot.AddCommand(command)
 
-	command := Command{
-		Name:           name,
-		InvokeCallback: callback,
-	}
-
-	bot.Commands[name] = command
-
-	return command, nil
+	return command, err
 }
 
-func (bot Bot) AddCommand(command Command) error {
+func (bot *Bot) AddCommand(command *Command) error {
 	_, commandExists := bot.GetCommand(command.Name)
 	if commandExists {
 		return fmt.Errorf("command %s already exists", command.Name)
 	}
-	bot.Commands[command.Name] = command
+	bot.Commands = append(bot.Commands, command)
 	return nil
 }
 
-func (bot Bot) GetCommand(name string) (CommandBase, bool) {
-
-	command, hasKey := bot.Commands[name]
-
-	if hasKey {
-		return command, true
+func (bot *Bot) GetCommand(name string) (*Command, bool) {
+	for _, command := range bot.Commands {
+		if command == nil {continue}
+		if command.Name == name {
+			return command, true
+		}
 	}
-	return Command{}, false
+	return NilCommand, false
 }
 
-func (bot Bot) RemoveCommand(name string) {
-	delete(bot.Commands, name)
+func (bot *Bot) RemoveCommand(name string) {
+	for i, command := range bot.Commands {
+		if command.Name == name {
+			bot.Commands = deleteCommand(bot.Commands, i)
+		}
+	}
 }
 
-func (bot Bot) SetHelpCommand(help HelpCommand) {
-	//bot.HelpCommand = help
-	info := help.Info()
-	bot.Commands[info.Name] = helpCommandRunner{bot, help}
+func (bot *Bot) SetHelpCommand(help HelpCommand) error {
+	return bot.AddCommand(HelpCommandHandler(help))
 }
 
-func (bot *Bot) GetContext(event *discordgo.MessageCreate) (Context, bool) {
+func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 	message := event.Message
 	session := bot.Session
 	content := message.Content
 
 	if message.Author.Bot || message.Author.ID == session.State.User.ID {
-		return Context{}, false
+		return NilContext, false
 	}
 
 	// check for command prefix in message. if present, trim it/redefine content
 	contentHasPrefix, content := hasPrefix(content, bot.Prefix, false)
 	if !contentHasPrefix {
-		return Context{}, false
+		return NilContext, false
 	}
 
 	if content == "" {
-		return Context{}, false
+		return NilContext, false
 	}
 
 	split := strings.Split(content, " ")
@@ -116,46 +115,46 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (Context, bool) {
 	command, validCommand := bot.GetCommand(split[0])
 
 	if !validCommand {
-		return Context{}, false
+		return NilContext, false
 	}
 
 	guild, errGuild := bot.Session.Guild(message.GuildID)
 	channel, errChannel := bot.Session.Channel(message.ChannelID)
 
 	if errGuild != nil || errChannel != nil {
-		return Context{}, false
+		return NilContext, false
 	}
 
 	return NewContext(bot, command, message.Author, message.Member, channel, guild), true
 
 }
 
-func (bot Bot) LoadCog(cog CogBase) {
-	defer func() {
-		err := recover()
-		if err != nil {
-			fmt.Printf("Error loading cog %s: %s\n", cog.GetName(), err)
-		}
-	}()
-
-	println("Setting up cog", cog.GetName())
-	println(bot.Cogs)
-	cog.Setup(bot)
-
-	println("Cog set up")
-	bot.Cogs[cog.GetName()] = cog
-
-	println("adding commands")
-	for name, cmd := range cog.Commands() {
-		println("adding command", name)
-		err := bot.AddCommand(cmd)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	go ExecuteSafely(cog.CogLoad)
-}
+//func (bot Bot) LoadCog(cog CogBase) {
+//	defer func() {
+//		err := recover()
+//		if err != nil {
+//			fmt.Printf("Error loading cog %s: %s\n", cog.GetName(), err)
+//		}
+//	}()
+//
+//	println("Setting up cog", cog.GetName())
+//	println(bot.Cogs)
+//	cog.Setup(bot)
+//
+//	println("Cog set up")
+//	bot.Cogs[cog.GetName()] = cog
+//
+//	println("adding commands")
+//	for name, cmd := range cog.Commands() {
+//		println("adding command", name)
+//		err := bot.AddCommand(cmd)
+//		if err != nil {
+//			panic(err)
+//		}
+//	}
+//
+//	go ExecuteSafely(cog.CogLoad)
+//}
 
 func (bot *Bot) Run() {
 	session := bot.Session

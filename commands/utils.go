@@ -2,6 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"strings"
 )
 
@@ -31,4 +33,12 @@ func ExecuteSafely(callback func() error) {
 	if err != nil {
 		fmt.Println("ExecuteSafely found error:", err)
 	}
+}
+
+func GetFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func deleteCommand(s []*Command, i int) []*Command {
+	return append(s[:i], s[i+1:]...)
 }
