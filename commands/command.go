@@ -17,11 +17,9 @@ type Command struct {
 	Handler CommandHandler
 }
 
-
 var NilCommand = &Command{
-	Handler: func(ctx *Context) error {return nil},
+	Handler: func(ctx *Context) error { return nil },
 }
-
 
 func (cmd *Command) Invoke(ctx *Context) error {
 	return cmd.Handler(ctx)

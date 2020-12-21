@@ -11,6 +11,8 @@ type Context struct {
 	Member  *discordgo.Member
 	Channel *discordgo.Channel
 	Guild   *discordgo.Guild
+
+	Args []string
 }
 
 var NilContext = &Context{
@@ -18,7 +20,7 @@ var NilContext = &Context{
 }
 
 func NewContext(bot *Bot, command *Command, author *discordgo.User, member *discordgo.Member,
-	channel *discordgo.Channel, guild *discordgo.Guild) *Context {
+	channel *discordgo.Channel, guild *discordgo.Guild, args []string) *Context {
 	return &Context{
 		Bot:     bot,
 		Command: command,
@@ -27,6 +29,7 @@ func NewContext(bot *Bot, command *Command, author *discordgo.User, member *disc
 		Member:  member,
 		Channel: channel,
 		Guild:   guild,
+		Args:    args,
 	}
 }
 

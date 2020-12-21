@@ -15,7 +15,7 @@ type Bot struct {
 	Session         *discordgo.Session
 	Commands        []*Command
 	Cogs            []*Cog
-	HelpCommand *HelpCommand
+	HelpCommand     *HelpCommand
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -71,7 +71,9 @@ func (bot *Bot) AddCommand(command *Command) error {
 
 func (bot *Bot) GetCommand(name string) (*Command, bool) {
 	for _, command := range bot.Commands {
-		if command == nil {continue}
+		if command == nil {
+			continue
+		}
 		if command.Name == name {
 			return command, true
 		}
@@ -113,6 +115,7 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 	split := strings.Split(content, " ")
 
 	command, validCommand := bot.GetCommand(split[0])
+	args := split[1:]
 
 	if !validCommand {
 		return NilContext, false
@@ -125,7 +128,7 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 		return NilContext, false
 	}
 
-	return NewContext(bot, command, message.Author, message.Member, channel, guild), true
+	return NewContext(bot, command, message.Author, message.Member, channel, guild, args), true
 
 }
 
@@ -166,11 +169,14 @@ func (bot *Bot) Run() {
 	}
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
 
 	// Cleanly close down the Discord session.
 	_ = session.Close()
+}
+
+func (bot *Bot) Me() (*discordgo.User, error) {
+	return bot.Session.User("@me")
 }

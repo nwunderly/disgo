@@ -52,7 +52,9 @@ func (cog Cog) Command(name string, callback CommandHandler) (Command, error) {
 	cog.commands[name] = command
 
 	cmd, hasKey := cog.commands[name]
-	if hasKey {println(name, "successfully added to cog command map (", cmd.Name, ")")}
+	if hasKey {
+		println(name, "successfully added to cog command map (", cmd.Name, ")")
+	}
 
 	return command, nil
 }
