@@ -16,6 +16,7 @@ type Bot struct {
 	Commands        []*Command
 	Cogs            []*Cog
 	HelpCommand     *HelpCommand
+	onReady         func()
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -31,6 +32,7 @@ func NewBot(prefix, token string) (*Bot, error) {
 		Session:  session,
 		Commands: commands,
 		Cogs:     cogs,
+		onReady:  func() {},
 	}
 
 	session.AddHandler(bot.MessageCreateHandler())
@@ -168,6 +170,8 @@ func (bot *Bot) Run() {
 		return
 	}
 
+	bot.onReady()
+
 	// Wait here until CTRL-C or other term signal is received.
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -179,4 +183,8 @@ func (bot *Bot) Run() {
 
 func (bot *Bot) Me() (*discordgo.User, error) {
 	return bot.Session.User("@me")
+}
+
+func (bot *Bot) OnReady(eventHandler func()) {
+	bot.onReady = eventHandler
 }
