@@ -16,7 +16,6 @@ type Bot struct {
 	Commands        []*Command
 	Cogs            []*Cog
 	HelpCommand     *HelpCommand
-	onReady         func()
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -32,16 +31,20 @@ func NewBot(prefix, token string) (*Bot, error) {
 		Session:  session,
 		Commands: commands,
 		Cogs:     cogs,
-		onReady:  func() {},
 	}
 
-	session.AddHandler(bot.MessageCreateHandler())
-	err = bot.SetHelpCommand(NewDefaultHelpCommand())
+	session.AddHandler(bot.CommandMessageCreateHandler())
+	session.AddHandler(bot.WaitForMessageCreateHandler())
 
-	return &bot, err
+	err = bot.SetHelpCommand(NewDefaultHelpCommand())
+	if err != nil {
+		return nil, err
+	}
+
+	return &bot, nil
 }
 
-func (bot *Bot) MessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
+func (bot *Bot) CommandMessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
 	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
 		ctx, valid := bot.GetContext(event)
 		if valid {
@@ -170,8 +173,6 @@ func (bot *Bot) Run() {
 		return
 	}
 
-	bot.onReady()
-
 	// Wait here until CTRL-C or other term signal is received.
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
@@ -182,9 +183,26 @@ func (bot *Bot) Run() {
 }
 
 func (bot *Bot) Me() (*discordgo.User, error) {
-	return bot.Session.User("@me")
+	return bot.Session.State.User, nil
+	//return bot.Session.User("@me")
 }
 
-func (bot *Bot) OnReady(eventHandler func()) {
-	bot.onReady = eventHandler
+func (bot *Bot) WaitForMessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
+	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
+	}
+}
+
+func (bot *Bot) WaitForMessage(check func(*discordgo.MessageCreate) bool) *discordgo.MessageCreate {
+	next := make(chan *discordgo.MessageCreate)
+	done := false
+	var msg *discordgo.MessageCreate = nil
+	for !done {
+		bot.Session.AddHandlerOnce(
+			func(_ *discordgo.Session, msg *discordgo.MessageCreate) {
+				next <- msg
+			})
+		msg = <-next
+		done = check(msg)
+	}
+	return msg
 }

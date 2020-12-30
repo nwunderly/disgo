@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/bwmarrin/discordgo"
 	"github.com/nwunderly/disgo/commands"
 	"os"
 	"strings"
@@ -18,11 +19,12 @@ func main() {
 	bot.Command("ping", ping)
 	bot.Command("echo", echo)
 	bot.Command("die", die)
+	bot.Command("testwaitfor", testWaitFor)
 
-	bot.OnReady(func() {
-		user, _ := bot.Me()
-		fmt.Println("Logged in as", user)
-	})
+	bot.Session.AddHandler(
+		func(_ *discordgo.Session, ready *discordgo.Ready) {
+			fmt.Println("Logged in as", ready.User)
+		})
 
 	bot.CaseInsensitive = true
 	//bot.RemoveCommand("help")
@@ -49,4 +51,14 @@ func echo(ctx *commands.Context) error {
 func ping(ctx *commands.Context) error {
 	_, err := ctx.Send("Pong!")
 	return err
+}
+
+func testWaitFor(ctx *commands.Context) error {
+	_, _ = ctx.Send("Send a message.")
+	msg := ctx.Bot.WaitForMessage(
+		func(m *discordgo.MessageCreate) bool {
+			return m.Author.ID == ctx.Author.ID
+		})
+	_, _ = ctx.Send(msg.ContentWithMentionsReplaced())
+	return nil
 }
