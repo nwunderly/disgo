@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type Bot struct {
@@ -34,7 +35,6 @@ func NewBot(prefix, token string) (*Bot, error) {
 	}
 
 	session.AddHandler(bot.CommandMessageCreateHandler())
-	session.AddHandler(bot.WaitForMessageCreateHandler())
 
 	err = bot.SetHelpCommand(NewDefaultHelpCommand())
 	if err != nil {
@@ -54,10 +54,11 @@ func (bot *Bot) CommandMessageCreateHandler() func(*discordgo.Session, *discordg
 	}
 }
 
-func (bot *Bot) Command(name string, callback CommandHandler) (*Command, error) {
+func (bot *Bot) Command(name string, desc string, callback CommandHandler) (*Command, error) {
 
 	command := &Command{
 		Name:    name,
+		Desc:    desc,
 		Handler: callback,
 	}
 	err := bot.AddCommand(command)
@@ -117,7 +118,7 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 		return NilContext, false
 	}
 
-	split := strings.Split(content, " ")
+	split := strings.Fields(content)
 
 	command, validCommand := bot.GetCommand(split[0])
 	args := split[1:]
@@ -187,22 +188,23 @@ func (bot *Bot) Me() (*discordgo.User, error) {
 	//return bot.Session.User("@me")
 }
 
-func (bot *Bot) WaitForMessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
-	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
-	}
-}
-
+// I would not recommend using this
 func (bot *Bot) WaitForMessage(check func(*discordgo.MessageCreate) bool) *discordgo.MessageCreate {
-	next := make(chan *discordgo.MessageCreate)
-	done := false
-	var msg *discordgo.MessageCreate = nil
-	for !done {
-		bot.Session.AddHandlerOnce(
-			func(_ *discordgo.Session, msg *discordgo.MessageCreate) {
-				next <- msg
-			})
-		msg = <-next
-		done = check(msg)
-	}
+	result := make(chan *discordgo.MessageCreate)
+	closeHandler := bot.Session.AddHandler(
+		func(_ *discordgo.Session, msg *discordgo.MessageCreate) {
+			if check(msg) {
+				select {
+				case result <- msg:
+					// in theory this won't panic
+					go func() { time.Sleep(time.Minute); close(result) }()
+					return
+				default:
+					return
+				}
+			}
+		})
+	msg := <-result
+	closeHandler()
 	return msg
 }

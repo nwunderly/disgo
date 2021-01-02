@@ -16,10 +16,10 @@ func main() {
 		return
 	}
 
-	bot.Command("ping", ping)
-	bot.Command("echo", echo)
-	bot.Command("die", die)
-	bot.Command("testwaitfor", testWaitFor)
+	bot.Command("ping", "", ping)
+	bot.Command("echo", "", echo)
+	bot.Command("die", "", die)
+	bot.Command("testwaitfor", "", testWaitFor)
 
 	bot.Session.AddHandler(
 		func(_ *discordgo.Session, ready *discordgo.Ready) {
