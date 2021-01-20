@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 )
 
 type Bot struct {
@@ -188,23 +187,28 @@ func (bot *Bot) Me() (*discordgo.User, error) {
 	//return bot.Session.User("@me")
 }
 
-// I would not recommend using this
 func (bot *Bot) WaitForMessage(check func(*discordgo.MessageCreate) bool) *discordgo.MessageCreate {
 	result := make(chan *discordgo.MessageCreate)
+	waiting := make(chan bool, 1)
+	waiting <- true
+
 	closeHandler := bot.Session.AddHandler(
 		func(_ *discordgo.Session, msg *discordgo.MessageCreate) {
 			if check(msg) {
-				select {
-				case result <- msg:
-					// in theory this won't panic
-					go func() { time.Sleep(time.Minute); close(result) }()
-					return
-				default:
+				// check if other channel is safe to write to
+				_, ok := <-waiting
+				if !ok {
 					return
 				}
+				// send message to waiting goroutine
+				result <- msg
+				close(result)
 			}
 		})
+
+	// block until a message is found and sent
 	msg := <-result
 	closeHandler()
+	close(waiting)
 	return msg
 }
