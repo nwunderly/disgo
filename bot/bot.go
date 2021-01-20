@@ -57,7 +57,7 @@ func testWaitFor(ctx *commands.Context) error {
 	_, _ = ctx.Send("Send a message.")
 	msg := ctx.Bot.WaitForMessage(
 		func(m *discordgo.MessageCreate) bool {
-			return m.Author.ID == ctx.Author.ID
+			return m.Author.ID == ctx.Author.ID && m.Content == ctx.Args[0]
 		})
 	_, _ = ctx.Send(msg.ContentWithMentionsReplaced())
 	return nil
