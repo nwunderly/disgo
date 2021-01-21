@@ -20,6 +20,7 @@ func main() {
 	bot.Command("echo", "", echo)
 	bot.Command("die", "", die)
 	bot.Command("testwaitfor", "", testWaitFor)
+	bot.Command("getargs", "", getArgs)
 
 	bot.Session.AddHandler(
 		func(_ *discordgo.Session, ready *discordgo.Ready) {
@@ -61,4 +62,9 @@ func testWaitFor(ctx *commands.Context) error {
 		})
 	_, _ = ctx.Send(msg.ContentWithMentionsReplaced())
 	return nil
+}
+
+func getArgs(ctx *commands.Context) error {
+	_, err := ctx.Send(strings.Join(ctx.Args, ", "))
+	return err
 }

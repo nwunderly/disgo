@@ -5,7 +5,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 )
 
@@ -117,7 +116,7 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 		return NilContext, false
 	}
 
-	split := strings.Fields(content)
+	split := GetArgs(content)
 
 	command, validCommand := bot.GetCommand(split[0])
 	args := split[1:]

@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -41,4 +42,18 @@ func GetFunctionName(i interface{}) string {
 
 func deleteCommand(s []*Command, i int) []*Command {
 	return append(s[:i], s[i+1:]...)
+}
+
+func GetArgs(s string) []string {
+	pattern, _ := regexp.Compile(`("[\w\s]+"|\w+)`)
+
+	args := pattern.FindAllString(s, -1)
+
+	for i, a := range args {
+		if strings.HasPrefix(a, `"`) && strings.HasSuffix(a, `"`) {
+			args[i] = strings.TrimSuffix(strings.TrimPrefix(a, `"`), `"`)
+		}
+	}
+
+	return args
 }
