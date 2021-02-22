@@ -185,29 +185,3 @@ func (bot *Bot) Me() (*discordgo.User, error) {
 	return bot.Session.State.User, nil
 	//return bot.Session.User("@me")
 }
-
-func (bot *Bot) WaitForMessage(check func(*discordgo.MessageCreate) bool) *discordgo.MessageCreate {
-	result := make(chan *discordgo.MessageCreate)
-	waiting := make(chan bool, 1)
-	waiting <- true
-
-	closeHandler := bot.Session.AddHandler(
-		func(_ *discordgo.Session, msg *discordgo.MessageCreate) {
-			if check(msg) {
-				// check if other channel is safe to write to
-				_, ok := <-waiting
-				if !ok {
-					return
-				}
-				// send message to waiting goroutine
-				result <- msg
-				close(result)
-			}
-		})
-
-	// block until a message is found and sent
-	msg := <-result
-	closeHandler()
-	close(waiting)
-	return msg
-}
