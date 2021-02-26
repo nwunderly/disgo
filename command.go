@@ -16,11 +16,12 @@ type CommandInfo struct {
 //}
 
 type Command struct {
-	Name    string
-	Desc    string
-	Handler CommandHandler
-	Checks []CommandCheck
-	Subcommands []*Command
+	Name          string
+	Desc          string
+	QualifiedName string
+	Handler       CommandHandler
+	Checks        []CommandCheck
+	Subcommands   []*Command
 }
 
 var NilCommand = &Command{
@@ -40,37 +41,50 @@ func (cmd *Command) Info() CommandInfo {
 	return CommandInfo{Name: cmd.Name, Desc: cmd.Desc}
 }
 
-func(cmd *Command) Check(checks ...CommandCheck) {
+func (cmd *Command) Check(checks ...CommandCheck) {
 	for _, check := range checks {
 		cmd.Checks = append(cmd.Checks, check)
 	}
 }
 
-func (cmd *Command) AddSubcommand(command *Command) error {
-	_, commandExists := cmd.GetSubcommand(command.Name)
-	if commandExists {
-		return fmt.Errorf("subcommand %s already exists", command.Name)
+func (cmd *Command) Subcommand(name string, desc string, callback CommandHandler) (*Command, error) {
+
+	subcommand := &Command{
+		Name:    name,
+		Desc:    desc,
+		Handler: callback,
 	}
-	cmd.Subcommands = append(cmd.Subcommands, command)
+	err := cmd.AddSubcommand(subcommand)
+
+	return subcommand, err
+}
+
+func (cmd *Command) AddSubcommand(subcommand *Command) error {
+	_, commandExists := cmd.GetSubcommand(subcommand.Name)
+	if commandExists {
+		return fmt.Errorf("subcommand %s already exists", subcommand.Name)
+	}
+	subcommand.QualifiedName = cmd.QualifiedName + subcommand.Name
+	cmd.Subcommands = append(cmd.Subcommands, subcommand)
 	return nil
 }
 
 func (cmd *Command) GetSubcommand(name string) (*Command, bool) {
-	for _, command := range cmd.Subcommands {
-		if command == nil {
+	for _, subcommand := range cmd.Subcommands {
+		if subcommand == nil {
 			continue
 		}
-		if command.Name == name {
-			return command, true
+		if subcommand.Name == name {
+			return subcommand, true
 		}
 	}
 	return NilCommand, false
 }
 
-func (bot *Bot) RemoveSubcommand(name string) {
-	for i, command := range bot.Commands {
-		if command.Name == name {
-			bot.Commands = deleteCommand(bot.Commands, i)
+func (cmd *Command) RemoveSubcommand(name string) {
+	for i, subcommand := range cmd.Subcommands {
+		if subcommand.Name == name {
+			cmd.Subcommands = deleteCommand(cmd.Subcommands, i)
 		}
 	}
 }

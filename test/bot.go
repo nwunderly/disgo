@@ -22,6 +22,20 @@ func main() {
 	bot.Command("testwaitfor", "", testWaitFor)
 	bot.Command("getargs", "", getArgs)
 
+	cmd, _ := bot.Command("testsubcommand", "", testSubcommandMain)
+	_, err = cmd.Subcommand("subcommand", "", testSubcommandSub)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	cmd, _ = bot.Command("testchecks", "", testChecks)
+	cmd.Check(func(ctx *disgo.Context) bool {
+		check := ctx.Author.ID == "204414611578028034"
+		ctx.Send(fmt.Sprintf("check result: %t", check))
+		return check
+	})
+
 	bot.Session.AddHandler(
 		func(_ *discordgo.Session, ready *discordgo.Ready) {
 			fmt.Println("Logged in as", ready.User)
@@ -66,5 +80,20 @@ func testWaitFor(ctx *disgo.Context) error {
 
 func getArgs(ctx *disgo.Context) error {
 	_, err := ctx.Send(strings.Join(ctx.Args, ", "))
+	return err
+}
+
+func testSubcommandMain(ctx *disgo.Context) error {
+	_, err := ctx.Send("No subcommand given.")
+	return err
+}
+
+func testSubcommandSub(ctx *disgo.Context) error {
+	_, err := ctx.Send("Subcommand worked, args:" + strings.Join(ctx.Args, ", "))
+	return err
+}
+
+func testChecks(ctx *disgo.Context) error {
+	_, err := ctx.Send("works")
 	return err
 }

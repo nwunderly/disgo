@@ -69,6 +69,7 @@ func (bot *Bot) AddCommand(command *Command) error {
 	if commandExists {
 		return fmt.Errorf("command %s already exists", command.Name)
 	}
+	command.QualifiedName = command.Name
 	bot.Commands = append(bot.Commands, command)
 	return nil
 }
@@ -118,10 +119,27 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 
 	split := GetArgs(content)
 
-	command, validCommand := bot.GetCommand(split[0])
-	args := split[1:]
+	var c, command *Command = nil, nil
+	var validCommand bool
+	var argIndex int
 
-	if !validCommand {
+	for i := range split {
+		if command == nil {
+			c, validCommand = bot.GetCommand(split[i])
+		} else {
+			c, validCommand = command.GetSubcommand(split[i])
+		}
+		if validCommand {
+			command = c
+		} else {
+			break
+		}
+		argIndex = i + 1
+	}
+
+	args := split[argIndex:]
+
+	if command == nil {
 		return NilContext, false
 	}
 
