@@ -3,10 +3,15 @@ package disgo
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 )
+
+type ErrorHandler func(*Context, error)
+type PanicHandler func(*Context, interface{})
 
 type Bot struct {
 	Prefix          string
@@ -15,6 +20,8 @@ type Bot struct {
 	Commands        []*Command
 	Cogs            []*Cog
 	HelpCommand     *HelpCommand
+	ErrorHandler    ErrorHandler
+	PanicHandler    PanicHandler
 }
 
 func NewBot(prefix, token string) (*Bot, error) {
@@ -34,6 +41,9 @@ func NewBot(prefix, token string) (*Bot, error) {
 
 	session.AddHandler(bot.CommandMessageCreateHandler())
 
+	bot.ErrorHandler = bot.defaultErrorHandler
+	bot.PanicHandler = bot.defaultPanicHandler
+
 	err = bot.SetHelpCommand(NewDefaultHelpCommand())
 	if err != nil {
 		return nil, err
@@ -42,14 +52,38 @@ func NewBot(prefix, token string) (*Bot, error) {
 	return &bot, nil
 }
 
+func (bot *Bot) ExecuteSafely(callback func() error) (recovered interface{}, returned error) {
+	defer func() {
+		recovered = recover()
+	}()
+	returned = callback()
+	return
+}
+
 func (bot *Bot) CommandMessageCreateHandler() func(*discordgo.Session, *discordgo.MessageCreate) {
 	return func(session *discordgo.Session, event *discordgo.MessageCreate) {
 		ctx, valid := bot.GetContext(event)
 		if valid {
-			defer RecoverAndLog()
-			_ = ctx.Invoke()
+			recovered, returned := bot.ExecuteSafely(ctx.Invoke)
+			if recovered != nil {
+				go bot.PanicHandler(ctx, recovered)
+				go ctx.Command.PanicHandler(ctx, recovered)
+			}
+			if returned != nil {
+				go bot.ErrorHandler(ctx, returned)
+				go ctx.Command.ErrorHandler(ctx, returned)
+			}
 		}
 	}
+}
+
+func (bot *Bot) defaultErrorHandler(ctx *Context, err error) {
+	log.Printf("error in command '%s': %s\n", ctx.Command.QualifiedName, err)
+}
+
+func (bot *Bot) defaultPanicHandler(ctx *Context, i interface{}) {
+	log.Printf("panic in command '%s': %s\n", ctx.Command.QualifiedName, i)
+	debug.PrintStack()
 }
 
 func (bot *Bot) Command(name string, desc string, callback CommandHandler) (*Command, error) {
@@ -151,14 +185,13 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 	}
 
 	return NewContext(bot, command, message.Author, message.Member, channel, guild, args), true
-
 }
 
 //func (bot Bot) LoadCog(cog CogBase) {
 //	defer func() {
 //		err := recover()
 //		if err != nil {
-//			fmt.Printf("Error loading cog %s: %s\n", cog.GetName(), err)
+//			log.Printf("Error loading cog %s: %s\n", cog.GetName(), err)
 //		}
 //	}()
 //

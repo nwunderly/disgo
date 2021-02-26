@@ -36,6 +36,16 @@ func main() {
 		return check
 	})
 
+	cmd, _ = bot.Command("testerror", "", testError)
+	cmd.ErrorHandler = func(ctx *disgo.Context, err error) {
+		fmt.Println("TESTERROR WORKS")
+	}
+
+	cmd, _ = bot.Command("testpanic", "", testPanic)
+	cmd.PanicHandler = func(ctx *disgo.Context, i interface{}) {
+		fmt.Println("TESTPANIC WORKS")
+	}
+
 	bot.Session.AddHandler(
 		func(_ *discordgo.Session, ready *discordgo.Ready) {
 			fmt.Println("Logged in as", ready.User)
@@ -96,4 +106,12 @@ func testSubcommandSub(ctx *disgo.Context) error {
 func testChecks(ctx *disgo.Context) error {
 	_, err := ctx.Send("works")
 	return err
+}
+
+func testError(ctx *disgo.Context) error {
+	return fmt.Errorf("test")
+}
+
+func testPanic(ctx *disgo.Context) error {
+	panic("test")
 }

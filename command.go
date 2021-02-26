@@ -22,6 +22,8 @@ type Command struct {
 	Handler       CommandHandler
 	Checks        []CommandCheck
 	Subcommands   []*Command
+	ErrorHandler  ErrorHandler
+	PanicHandler  PanicHandler
 }
 
 var NilCommand = &Command{

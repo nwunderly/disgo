@@ -27,13 +27,19 @@ func RecoverAndLog() {
 	}
 }
 
-func ExecuteSafely(callback func() error) {
-	defer RecoverAndLog()
-	err := callback()
-
-	if err != nil {
-		fmt.Println("ExecuteSafely found error:", err)
-	}
+func ExecuteSafely(callback func() error) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			switch x := e.(type) {
+			case error:
+				err = x
+			default:
+				err = fmt.Errorf("%s", e)
+			}
+		}
+	}()
+	err = callback()
+	return
 }
 
 func GetFunctionName(i interface{}) string {
