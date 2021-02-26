@@ -16,4 +16,4 @@
 
 # extra
 .idea/
-bot/token.go
+test/token.go

@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"github.com/nwunderly/disgo/commands"
+	"github.com/nwunderly/disgo"
 	"os"
 	"strings"
 )
 
 func main() {
-	bot, err := commands.NewBot(":=", TOKEN)
+	bot, err := disgo.NewBot(":=", TOKEN)
 
 	if err != nil {
 		fmt.Println("encountered error ", err)
@@ -33,7 +33,7 @@ func main() {
 	bot.Run()
 }
 
-func die(ctx *commands.Context) error {
+func die(ctx *disgo.Context) error {
 	if ctx.Author.ID == "204414611578028034" {
 		_, _ = ctx.Send("ok")
 		_ = ctx.Bot.Session.Close()
@@ -44,19 +44,19 @@ func die(ctx *commands.Context) error {
 	return nil
 }
 
-func echo(ctx *commands.Context) error {
+func echo(ctx *disgo.Context) error {
 	_, err := ctx.Send(strings.Join(ctx.Args, " "))
 	return err
 }
 
-func ping(ctx *commands.Context) error {
+func ping(ctx *disgo.Context) error {
 	_, err := ctx.Send("Pong!")
 	return err
 }
 
-func testWaitFor(ctx *commands.Context) error {
+func testWaitFor(ctx *disgo.Context) error {
 	_, _ = ctx.Send("Send a message.")
-	msg := ctx.Bot.WaitForMessage(
+	msg := ctx.Bot.WaitForMessageCreate(
 		func(m *discordgo.MessageCreate) bool {
 			return m.Author.ID == ctx.Author.ID && m.Content == ctx.Args[0]
 		})
@@ -64,7 +64,7 @@ func testWaitFor(ctx *commands.Context) error {
 	return nil
 }
 
-func getArgs(ctx *commands.Context) error {
+func getArgs(ctx *disgo.Context) error {
 	_, err := ctx.Send(strings.Join(ctx.Args, ", "))
 	return err
 }
