@@ -10,9 +10,6 @@ import (
 	"syscall"
 )
 
-type ErrorHandler func(*Context, error)
-type PanicHandler func(*Context, interface{})
-
 type Bot struct {
 	Prefix          string
 	CaseInsensitive bool
@@ -22,34 +19,6 @@ type Bot struct {
 	HelpCommand     *HelpCommand
 	ErrorHandler    ErrorHandler
 	PanicHandler    PanicHandler
-}
-
-func NewBot(prefix, token string) (*Bot, error) {
-	session, err := discordgo.New("Bot " + token)
-	if err != nil {
-		return nil, err
-	}
-	commands := make([]*Command, 0, 1)
-	cogs := make([]*Cog, 0)
-
-	bot := Bot{
-		Prefix:   prefix,
-		Session:  session,
-		Commands: commands,
-		Cogs:     cogs,
-	}
-
-	session.AddHandler(bot.CommandMessageCreateHandler())
-
-	bot.ErrorHandler = bot.defaultErrorHandler
-	bot.PanicHandler = bot.defaultPanicHandler
-
-	err = bot.SetHelpCommand(NewDefaultHelpCommand())
-	if err != nil {
-		return nil, err
-	}
-
-	return &bot, nil
 }
 
 func (bot *Bot) ExecuteSafely(callback func() error) (recovered interface{}, returned error) {
@@ -184,7 +153,7 @@ func (bot *Bot) GetContext(event *discordgo.MessageCreate) (*Context, bool) {
 		return NilContext, false
 	}
 
-	return NewContext(bot, command, message.Author, message.Member, channel, guild, args), true
+	return NewContext(bot, command, event, message.Author, message.Member, channel, guild, args), true
 }
 
 //func (bot Bot) LoadCog(cog CogBase) {

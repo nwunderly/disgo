@@ -5,8 +5,10 @@ import "github.com/bwmarrin/discordgo"
 type Context struct {
 	Bot     *Bot
 	Command *Command
+	Shard   *Shard
 
 	Session *discordgo.Session
+	Message *discordgo.MessageCreate
 	Author  *discordgo.User
 	Member  *discordgo.Member
 	Channel *discordgo.Channel
@@ -19,12 +21,13 @@ var NilContext = &Context{
 	Command: NilCommand,
 }
 
-func NewContext(bot *Bot, command *Command, author *discordgo.User, member *discordgo.Member,
-	channel *discordgo.Channel, guild *discordgo.Guild, args []string) *Context {
+func NewContext(bot *Bot, command *Command, message *discordgo.MessageCreate, author *discordgo.User,
+	member *discordgo.Member, channel *discordgo.Channel, guild *discordgo.Guild, args []string) *Context {
 	return &Context{
 		Bot:     bot,
 		Command: command,
 		Session: bot.Session,
+		Message: message,
 		Author:  author,
 		Member:  member,
 		Channel: channel,

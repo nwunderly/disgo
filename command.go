@@ -2,9 +2,6 @@ package disgo
 
 import "fmt"
 
-type CommandHandler func(*Context) error
-type CommandCheck func(*Context) bool
-
 type CommandInfo struct {
 	Name string
 	Desc string

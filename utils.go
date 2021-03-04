@@ -63,3 +63,11 @@ func GetArgs(s string) []string {
 
 	return args
 }
+
+func intRange(begin, end int) []int {
+	seq := make([]int, 0, end-begin)
+	for i := begin; i < end; i++ {
+		seq = append(seq, i)
+	}
+	return seq
+}
